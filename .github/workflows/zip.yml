@@ -1,0 +1,22 @@
+name: Zip
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  zip:
+    runs-on: ubuntu-latest
+    permissions: write-all
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Zip
+        run: zip -r immobilisations.zip modules
+
+      - name: Upload Release Asset
+        run: gh release upload ${{ github.event.release.tag_name }} immobilisations.zip
+        env:
+          GH_TOKEN: ${{ github.token }}
