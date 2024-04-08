@@ -1,0 +1,141 @@
+{{#form on="save"}}
+    {{if $_POST.key}}
+        {{:assign key=$_POST.key}}
+        {{:assign new_number=$_POST.number|intval}}
+    {{else}}
+        {{#load select="MAX($$.number) AS number" type="immobilisation" assign="max"}}
+        {{/load}}
+        {{:assign new_number="%d+1"|math:$max.number}}
+        {{:assign key=""|uuid}}
+    {{/if}}
+
+    {{#foreach from=$_POST.account key="key" item="value"}}
+        {{:assign var="_POST.account" value=$key}}
+        {{if !$value|regexp_match:"/^2[01]/"}}
+            {{:error message="Le compte d'immobilisation doit être un compte 20 ou 21."}}*
+        {{/if}}
+    {{/foreach}}
+    {{#foreach from=$_POST.third_party_account key="key" item="value"}}
+        {{:assign var="_POST.third_party_account" value=$key}}
+        {{if !$value|regexp_match:"/^404/"}}
+            {{:error message="Le compte de tiers doit être un compte 404."}}
+        {{/if}}
+    {{/foreach}}
+    {{:assign var="lines." id_account=$_POST.account debit=$_POST.amount}}
+    {{:assign var="lines." id_account=$_POST.third_party_account credit=$_POST.amount}}
+
+    {{:assign var="_POST.label" value=$_POST.label|trim}}
+    {{if !$_POST.entry_label}}
+        {{:assign var="_POST.entry_label" value="Immobilisation — %s"|args:$_POST.label}}
+    {{/if}}
+
+    {{if $_POST.entry}}
+        {{:assign path="accounting/transaction/%d"|args:$_POST.entry}}
+    {{else}}
+        {{:assign path="accounting/transaction"}}
+
+        {{#years closed=false where="start_date <= :date AND :date <= end_date" :date=$_POST.date|parse_date}}
+            {{:assign var=_POST.year_id value=$id}}
+        {{else}}
+            {{:error message="Aucun exercice ouvert ne correspond à la date désirée !"}}
+        {{/years}}
+    {{/if}}
+    {{:api
+        path=$path
+        method="POST"
+        assign="result"
+
+        id_year=$_POST.year_id
+        date=$_POST.date|date_short
+        type="ADVANCED"
+        label=$_POST.entry_label|trim
+        lines=$lines
+    }}
+
+    {{:save
+        validate_schema="./immobilisation.schema.json"
+        key=$key
+        number=$new_number
+        type="immobilisation"
+
+        label=$_POST.label|trim
+        description=$_POST.description|trim|or:null
+        duration=$_POST.duration|intval
+        entry=$result.id
+    }}
+    {{:redirect to="./view.html?key=%s&created"|args:$key}}
+{{/form}}
+
+
+{{if $_GET.key}}
+    {{#load key=$_GET.key assign="immo"}}
+    {{else}}
+        {{:http code=404}}
+        {{:error message="Immobilisation non trouvée !"}}
+    {{/load}}
+{{/if}}
+
+{{:assign title="Nouvelle immobilisation"}}
+{{:assign submit_label="Créer"}}
+{{:assign back_href="./"}}
+{{if $immo}}
+    {{:assign title="Immobilisation n°%d"|args:$immo.number}}
+    {{:assign submit_label="Modifier"}}
+
+    {{:include file="./_populate_immo.tpl" immo=$immo keep="immo"}}
+    {{if !$immo.not_found}}
+        {{:assign back_href="./view.html?key=%s"|args:$immo.key}}
+    {{/if}}
+{{/if}}
+
+
+{{:admin_header title=$title}}
+{{:form_errors}}
+
+<nav style="margin-bottom: 1em;">
+    {{:linkbutton shape="left" label="Retour" href=$back_href}}
+</nav>
+
+<form method="post" action="">
+    {{if $immo}}
+        {{:input type="hidden" name="key" source=$immo}}
+        {{:input type="hidden" name="number" source=$immo}}
+        {{if !$immo.not_found}}
+            {{:input type="hidden" name="entry" source=$immo}}
+            {{:input type="hidden" name="year_id" source=$immo}}
+        {{/if}}
+    {{/if}}
+
+    <fieldset>
+        <legend>Identification de l'immobilisation</legend>
+
+        <dl>
+            {{:input type="text" name="label" label="Objet" required=true source=$immo}}
+            {{:input type="textarea" name="description" label="Description" source=$immo help="On peut ici enregistrer un numéro de série ou décrire la composition de l'immobilisation dans le cas d'un lot."}}
+            {{:input type="date" name="date" label="Date d'entrée en service" required=true source=$immo help="Par défaut, rentrer la date d'acquisition."}}
+            {{:input type="number" name="duration" label="Durée d'immobilisation (en années)" required=true source=$immo}}
+            {{:input type="money" name="amount" label="Montant de l'immobilisation" required=true source=$immo}}
+        </dl>
+    </fieldset>
+
+    <fieldset>
+        <legend>Comptabilité</legend>
+
+        <dl>
+            {{#accounts codes="404"}}
+                {{:assign var="third_party_account.%d"|args:$id value="%s — %s"|args:$code:$label}}
+            {{/accounts}}
+
+            {{:input type="text" name="entry_label" label="Libellé de l'écriture" source=$immo help="Laisser vide pour utiliser l'objet de l'immobilisation comme libellé."}}
+            {{:input type="list" name="account" multiple=false label="Compte d'immobilisation" required=true source=$immo target="!acc/charts/accounts/selector.php"}}
+            {{:input type="list" name="third_party_account" multiple=false label="Compte de tiers" required=true source=$immo default=$third_party_account target="!acc/charts/accounts/selector.php"}}
+        </dl>
+        <p class="help">Vous pourrez par la suite modifier l'écriture pour saisir une référence, joindre des documents, etc.</p>
+    </fieldset>
+
+    <p class="submit">
+        {{:button type="submit" shape="right" label=$submit_label name="save" class="main"}}
+    </p>
+</form>
+
+{{:admin_footer}}

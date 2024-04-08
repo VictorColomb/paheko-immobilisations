@@ -1,0 +1,135 @@
+{{#form on="save"}}
+    {{#years closed=false where="start_date <= :date AND end_date >= :date" :date=$_POST.date|parse_date}}
+        {{:assign year_id=$id}}
+    {{else}}
+        {{:error message="Aucun exercice ouvert ne correspond à la date sélectionnée !"}}
+    {{/years}}
+
+    {{#foreach from=$_POST.account key="key"}}
+        {{:assign var="_POST.account" value=$key}}
+    {{/foreach}}
+    {{#foreach from=$_POST.amort_account key="key"}}
+        {{:assign var="_POST.amort_account" value=$key}}
+    {{/foreach}}
+
+    {{:assign var="lines." id_account=$_POST.account credit=$_POST.amount}}
+    {{:assign var="lines." id_account=$_POST.amort_account debit=$_POST.amount}}
+
+    {{:api
+        method="POST"
+        path="accounting/transaction"
+        assign="result"
+
+        id_year=$year_id
+        date=$_POST.date|date_short
+        type="ADVANCED"
+        label=$_POST.label|trim
+        lines=$lines
+    }}
+
+    {{:save key=$_POST.key writeoff_entry=$result.id}}
+    {{:redirect to="./view.html?key=%s&created"|args:$_POST.key}}
+{{/form}}
+
+{{#form on="link"}}
+    {{#foreach from=$_POST.entry key="key"}}
+        {{:save key=$_POST.key writeoff_entry=$key}}
+        {{:break}}
+    {{/foreach}}
+    {{:redirect to="./view.html?key=%s&linked"|args:$_POST.key}}
+{{/form}}
+
+{{#form on="unlink"}}
+    {{:save key=$_POST.key writeoff_entry=null}}
+    {{:redirect to="./view.html?key=%s"|args:$_POST.key}}
+{{/form}}
+
+
+{{if $_GET.key}}
+    {{#load key=$_GET.key assign="immo"}}
+    {{/load}}
+{{/if}}
+{{if !$immo}}
+    {{:http code=404}}
+    {{:error message="Immobilisation non trouvée !"}}
+{{/if}}
+
+{{:include path="./_populate_immo.tpl" immo=$immo keep="immo"}}
+{{if $immo.not_found}}
+    {{:error message="L'écriture d'immobilisation n'a pas été trouvée ! Peut être a-t-elle été supprimée ?"}}
+{{/if}}
+
+
+{{:admin_header title="Immobilisation n°%d"|args:$immo.number}}
+{{:form_errors}}
+
+{{if $immo.vnc != 0 && !$_GET|has_key:"unlink"}}
+    <p class="alert block">Attention, le total des amortissements n'est pas égal au montant de l'immobilisation.</p>
+{{/if}}
+
+<nav style="margin-bottom: 1em;">
+    {{:linkbutton shape="left" label="Retour à l'immobilisation" href="./view.html?key=%s"|args:$immo.key}}
+</nav>
+
+<form method="post" action="">
+    {{:input type="hidden" name="key" source=$immo}}
+
+    {{if $_GET|has_key:"unlink"}}
+        <fieldset>
+            <legend>Délier une écriture de mise au rebus</legend>
+
+            <h3 class="warning">Délier l'écriture de mise au rebus de l'immobilisation {{$immo.number}} ?</h3>
+            <p class="help">L'écriture ne peut pas être supprimée automatiquement. Cliquez sur le lien ci-dessous pour la supprimer rapidement.</p>
+            <p class="num" style="margin: 1em;">
+                {{:link href="!acc/transactions/delete.php?id=%d"|args:$immo.writeoff_entry label="#%s"|args:$immo.writeoff_entry target="_blank"}}
+            </p>
+        </fieldset>
+        <p class="submit">
+            {{:button type="submit" name="unlink" shape="right" label="Délier" class="main"}}
+        </p>
+
+    {{elseif $_GET|has_key:"link"}}
+        <fieldset>
+            <legend>Lier une écriture de mise au rebus</legend>
+
+            <dl>
+                {{:input type="list" name="entry" multiple=false required=true label="Écriture de mise au rebus" target="!acc/transactions/selector.php"}}
+            </dl>
+        </fieldset>
+        <p class="help">
+            Attention, aucune validation n'est effectuée sur l'écriture choisie.
+        </p>
+        <p class="submit">
+            {{:button type="submit" name="link" shape="right" label="Lier" class="main"}}
+        </p>
+
+    {{else}}
+        {{:assign var="immo.account.%d"|args:$immo.account value=$immo.account_label}}
+        {{#accounts id=$immo.account}}
+            {{:assign var="immo.amort_account" value=$code|substr:1}}
+            {{:assign var="immo.amort_account" value="28"|cat:$immo.amort_account}}
+        {{/accounts}}
+        {{#accounts codes=$immo.amort_account}}
+            {{:assign var="immo.amort_account.%d"|args:$id value="%s — %s"|args:$code:$label}}
+        {{else}}
+            {{:assign var="immo.amort_account" value=null}}
+        {{/accounts}}
+
+        <fieldset>
+            <legend>Saisir une écriture d'immobilisation</legend>
+
+            <dl>
+                {{:input type="text" name="label" required=true label="Libellé" default="Mise au rebus — %s"|args:$immo.label}}
+                {{:input type="money" name="amount" required=true default=$immo.amount label="Montant"}}
+                {{:input type="date" name="date" required=true label="Date"}}
+                {{:input type="list" name="account" multiple=false required=true label="Compte d'immobilisation" source=$immo target="!acc/charts/accounts/selector.php"}}
+                {{:input type="list" name="amort_account" multiple=false required=true label="Compte d'amortissement" source=$immo target="!acc/charts/accounts/selector.php"}}
+            </dl>
+        </fieldset>
+        <p class="submit">
+            {{:button type="submit" name="save" shape="right" label="Créer" class="main"}}
+        </p>
+    {{/if}}
+</form>
+
+{{:admin_footer}}

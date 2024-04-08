@@ -1,0 +1,71 @@
+{{:admin_header title="Immobilisations" current="home"}}
+
+<nav class="tabs">
+    <aside>
+        {{:linkbutton href="link.html" label="Lier une écriture" shape="attach"}}
+        {{:linkbutton href="new.html" label="Nouvelle immobilisation" shape="plus"}}
+    </aside>
+
+    <ul>
+        <li{{if $_GET.status === 'all'}} class="current"{{/if}}><a href="./?status=all">Toutes les immobilisations</a></li>
+        <li{{if !$_GET.status}} class="current"{{/if}}><a href="./">Immobilisations en cours</a></li>
+    </ul>
+</nav>
+
+{{:assign where="$$.type = 'immobilisation' AND $$.writeoff_entry IS NULL"}}
+{{if $_GET.status === 'all'}}
+    {{:assign where="$$.type = 'immobilisation'"}}
+{{/if}}
+
+<table class="list">
+    <thead>
+        <td class="num">N°</td>
+        <td>Objet</td>
+        <td>Date</td>
+        <td>Durée d'immobilisation</td>
+        <td class="money">Montant</td>
+        <td class="money">VNC</td>
+        <td></td>
+    </thead>
+    <tbody>
+        {{#load
+            type="immobilisation"
+            where=$where
+            order="$$.number"
+            assign="immo"
+        }}
+            {{:include file="./_populate_immo.tpl" immo=$immo keep="immo"}}
+
+            <tr>
+                {{if $immo.not_found}}
+                    <td class="num">
+                        <span style="border-radius: .5rem; padding: 0 .3rem; text-align: center; background: grey;">{{$immo.number}}</span>
+                    </td>
+                    <td colspan="4" style="text-align: center;">
+                        <i>Écriture d'immobilisation non trouvée !</i>
+                    </td>
+                    <td colspan="2" class="actions">
+                        {{:linkbutton shape="edit" label="Modifier" href="./new.html?key="|cat:$key}}
+                        {{:linkbutton shape="delete" label="Supprimer" href="./delete.html?key="|cat:$key}}
+                    </td>
+                {{else}}
+                    <td class="num">{{:link href="./view.html?key=%s"|args:$immo.key label=$immo.number}}</td>
+                    <th>{{$immo.label}}</th>
+                    <td>{{$immo.date|date_short}}</td>
+                    {{if $immo.duration == 1}}
+                        <td>1 an</td>
+                    {{else}}
+                        <td>{{$immo.duration}} ans</td>
+                    {{/if}}
+                    <td class="money">{{$immo.amount|money_currency}}</td>
+                    <td class="money">{{$immo.vnc|money_currency}}</td>
+                    <td class="actions">
+                        {{:linkbutton shape="menu" label="Ouvrir" href="./view.html?key="|cat:$key}}
+                    </td>
+                {{/if}}
+            </tr>
+        {{/load}}
+    </tbody>
+</table>
+
+{{:admin_footer}}

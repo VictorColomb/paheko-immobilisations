@@ -1,0 +1,53 @@
+{{#form on="delete"}}
+    {{:delete type="immobilisation" key=$_POST.key}}
+    {{:redirect to="./"}}
+{{/form}}
+
+
+{{if $_GET.key}}
+    {{#load key=$_GET.key assign="immo"}}
+    {{/load}}
+{{/if}}
+{{if !$immo}}
+    {{:http code=404}}
+    {{:error message="Immobilisation non trouvée !"}}
+{{/if}}
+
+
+{{:admin_header title="Immobilisation n°%s"|args:$immo.number}}
+{{:form_errors}}
+
+<nav style="margin-bottom: 1em;">
+    {{:linkbutton shape="left" label="Retour" href="./"}}
+</nav>
+
+<form method="post" action="">
+    {{:input type="hidden" name="key" default=$immo.key}}
+
+    <fieldset>
+        <legend>Supprimer une immobilisation</legend>
+
+        <h3 class="warning">Supprimer l'immobilisation n°2 ?</h3>
+        <p class="help">Les écritures liées à l'immobilisations ne peuvent pas être supprimées automatiquement. Cliquez sur les liens ci-dessous pour les supprimer rapidement.</p>
+        <p class="num grey-out" style="margin: 1em;">
+            {{:assign var="delete_entries." value=$immo.entry}}
+
+            {{#foreach from=$immo.amort_entries item="entry"}}
+                {{if $entry}}
+                    {{:assign var="delete_entries." value=$entry}}
+                {{/if}}
+            {{/foreach}}
+
+            {{if $immo.writeoff_entry}}
+                {{:assign var="delete_entries." value=$immo.writeoff_entry}}
+            {{/if}}
+
+            {{:include file="./_entry_delete_prompt.tpl" entries=$delete_entries}}
+        </p>
+    </fieldset>
+    <p class="submit">
+        {{:button type="submit" name="delete" shape="delete" label="Supprimer" class="main"}}
+    </p>
+</form>
+
+{{:admin_footer}}

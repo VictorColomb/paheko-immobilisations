@@ -1,0 +1,82 @@
+{{#form on="link"}}
+    {{#foreach from=$_POST.entry key="key"}}
+        {{:assign var="_POST.entry" value=$key}}
+    {{/foreach}}
+    {{#transactions id=$_POST.entry}}
+    {{else}}
+        {{:http code=404}}
+        {{:error message="Écriture non trouvée !"}}
+    {{/transactions}}
+    {{:api
+        path="accounting/transaction/%d"|args:$_POST.entry
+        method="GET"
+        assign="result"
+    }}
+
+    {{:assign account=0}}
+    {{#foreach from=$result.lines item="line"}}
+        {{if $line.account_code|regexp_match:"/^2[01]/" && $line.debit > 0}}
+            {{:assign account=$account_code}}
+            {{:assign account="%d+%d"|math:$amount:$debit}}
+        {{/if}}
+        {{if $line.account_code|regexp_match:"/^404/" && $line.credit > 0}}
+            {{:assign third_party_account=$account_code}}
+        {{/if}}
+    {{/foreach}}
+
+    {{if !$account}}
+        {{:error message="L'écriture doit contenir une ligne au débit sur un compte 20 ou 21 !"}}
+    {{elif !$third_party_account}}
+        {{:error message="L'écriture doit contenir une ligne au crédit sur un compte 404 !"}}
+    {{/if}}
+
+    {{#load select="MAX($$.number) AS number" type="immobilisation" assign="max"}}
+    {{/load}}
+    {{:assign new_number="%d+1"|math:$max.number}}
+    {{:assign key=""|uuid}}
+
+    {{:save
+        validate_schema="./immobilisation.schema.json"
+        key=$key
+        number=$new_number
+        type="immobilisation"
+
+        label=$_POST.label|trim
+        description=$_POST.description|trim|or:null
+        duration=$_POST.duration|intval
+        entry=$_POST.entry
+    }}
+    {{:redirect to="./view.html?key=%s&linked"|args:$key}}
+{{/form}}
+
+
+{{:admin_header title="Nouvelle immobilisation"}}
+{{:form_errors}}
+
+<nav style="margin-bottom: 1em;">
+    {{:linkbutton shape="left" label="Retour" href="./"}}
+</nav>
+
+<form method="post" action="">
+    <fieldset>
+        <legend>Lier une écriture d'immobilisation</legend>
+
+        <dl>
+            {{:input type="list" name="entry" label="Écriture d'immobilisation" required=true target="!acc/transactions/selector.php"}}
+        </dl>
+    </fieldset>
+    <fieldset>
+        <legend>Identification de l'immobilisation</legend>
+
+        <dl>
+            {{:input type="text" name="label" label="Objet de l'immobilisation" required=true}}
+            {{:input type="textarea" name="description" label="Description"}}
+            {{:input type="number" name="duration" label="Durée d'immobilisation" required=true}}
+        </dl>
+    </fieldset>
+    <p class="submit">
+        {{:button type="submit" name="link" label="Lier" shape="right" class="main"}}
+    </p>
+</form>
+
+{{:admin_footer}}

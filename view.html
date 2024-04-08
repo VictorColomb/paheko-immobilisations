@@ -1,0 +1,186 @@
+{{if $_GET.key}}
+    {{#load key=$_GET.key assign="immo"}}
+    {{/load}}
+{{/if}}
+{{if !$immo}}
+    {{:http code=404}}
+    {{:error message="Immobilisation non trouvée !"}}
+{{/if}}
+
+
+{{:include file="./_populate_immo.tpl" immo=$immo keep="immo"}}
+{{if $immo.not_found}}
+    {{:error message="L'écriture d'immobilisation n'a pas été trouvée ! Peut être a-t-elle été supprimée ?"}}
+{{/if}}
+{{:include
+    file="./_count_years.tpl"
+    date=$immo.date
+    duration=$immo.duration
+
+    keep="number_of_years"
+}}
+
+
+{{:admin_header title="Immobilisation n°%s"|args:$immo.number}}
+
+{{if $_GET|has_key:"created"}}
+    <p class="confirm block">L'écriture a été créée avec succès.</p>
+{{elseif $_GET|has_key:"linked"}}
+    <p class="confirm block">L'écriture a été liée avec succès.</p>
+{{elseif $_GET|has_key:"unlinked"}}
+    <p class="confirm block">L'écriture a été déliée avec succès.</p>
+{{/if}}
+
+<nav class="tabs">
+    <aside>
+        {{:linkbutton shape="edit" label="Modifier" href="./new.html?key=%s"|args:$immo.key}}
+        {{:linkbutton shape="delete" label="Supprimer" href="./delete.html?key=%s"|args:$immo.key}}
+    </aside>
+
+    {{:linkbutton shape="left" label="Retour à la liste des immobilisations" href="./"}}
+</nav>
+
+<dl class="describe">
+    <dt>Numéro de l'immobilisation</dt>
+    <dd>{{$immo.number}}</dd>
+
+    <dt>Objet</dt>
+    <dd><strong>{{$immo.label}}</strong></dd>
+
+    {{if $immo.description}}
+        <dt>Description</dt>
+        <dd>{{$immo.description|escape|nl2br}}</dd>
+    {{/if}}
+
+    <dt>Date de mise en service</dt>
+    <dd>{{$immo.date|date_short}}</dd>
+
+    <dt>Durée d'immobilisation</dt>
+    {{if $immo.duration == 1}}
+        <dd>1 an</dd>
+    {{else}}
+        <dd>{{$immo.duration}} ans</dd>
+    {{/if}}
+
+    <dt>Compte d'immobilisation</dt>
+    <dd>{{$immo.account_label}}</dd>
+
+    <dt>Écriture d'immobilisation</dt>
+    <dd class="num">{{:link href="!acc/transactions/details.php?id=%d"|args:$immo.entry label="#%s"|args:$immo.entry}}</dd>
+</dl>
+<dl class="describe">
+    <dt>Montant immobilisé</dt>
+    <dd>{{$immo.amount|money_currency}}</dd>
+
+    <dt>Valeur Nette Comptable (VNC)</dt>
+    <dd>{{$immo.vnc|money_currency}}</dd>
+</dl>
+<dl class="describe" style="align-items: center;">
+    <dt>Écriture de mise au rebus</dt>
+    {{if $immo.writeoff_entry}}
+        <dd class="num">
+            {{:link href="!acc/transactions/details.php?id=%d"|args:$immo.writeoff_entry label="#%s"|args:$immo.writeoff_entry}}
+            {{:linkbutton href="./writeoff.html?key=%s&unlink"|args:$immo.key shape="delete" label="Délier"}}
+        </dd>
+    {{else}}
+        <dd>
+            {{:linkbutton href="./writeoff.html?key=%s"|args:$immo.key shape="plus" label="Créer"}}
+            {{:linkbutton href="./writeoff.html?key=%s&link"|args:$immo.key shape="attach" label="Lier"}}
+        </dd>
+    {{/if}}
+</dl>
+
+<h2 class="ruler">Écritures d'amortissement</h2>
+<div style="display: flex; flex-direction: row; align-items: center; margin-bottom: 1em;">
+    <div style="flex: 0 0 calc(100% - 15rem);">
+        <table class="list" style="margin-bottom: 0;">
+            <thead>
+                <td class="num">N°</td>
+                <td>Exercice</td>
+                <td>Date</td>
+                <td class="money">Montant</td>
+                <td></td>
+            </thead>
+            <tbody>
+                {{#foreach from=$immo.amort_entries item="amort_entry"}}
+                    <tr>
+                        <td class="num">
+                            {{if $amort_entry.not_found}}
+                                <span style="border-radius: .5rem; padding: 0 .3rem; text-align: center; background: grey;">#{{$amort_entry.id}}</a>
+                            {{else}}
+                                {{:link href="!acc/transactions/details.php?id=%d"|args:$amort_entry.id label="#%s"|args:$amort_entry.id}}
+                            {{/if}}
+                        </td>
+                        {{if $amort_entry.not_found}}
+                            <td colspan="3" style="text-align: center;"><i>Écriture non trouvée !</i></td>
+                        {{else}}
+                            <td>{{$amort_entry.year_label}}</td>
+                            <td>{{$amort_entry.date|date_short}}</td>
+                            <td class="money">{{$amort_entry.amount|money_currency}}</td>
+                        {{/if}}
+                        <td class="actions">
+                            {{:linkbutton href="./amortisation.html?key=%s&unlink=%d"|args:$immo.key:$amort_entry.id shape="delete" label="Délier"}}
+                        </td>
+                    </tr>
+                {{/foreach}}
+            </tbody>
+        </table>
+    </div>
+    <div style="flex: 0 0 15rem; text-align: center;">
+        {{:linkbutton href="./amortisation.html?key=%s"|args:$immo.key shape="plus" label="Créer"}}
+        <br>
+        {{:linkbutton href="./amortisation.html?key=%s&link"|args:$immo.key shape="attach" label="Lier"}}
+    </div>
+</div>
+
+<h2 class="ruler">Tableau des amortissements linéaires</h2>
+<table class="list" style="margin: 0 12.5%; width: 75%;">
+    <thead>
+        <tr>
+            <td>Exercice</td>
+            <td>Date de clôture</td>
+            <td class="money">Annuité d'amortissement</td>
+            <td class="money">VNC à la clôture</td>
+        </tr>
+    </thead>
+    <tbody>
+        {{:assign vnc=$immo.amount}}
+        {{#foreach count=$number_of_years key="i"}}
+            {{:assign amort_year_id=null}}
+            {{:assign amort_year_label=null}}
+            {{:assign amort_year_start=null}}
+            {{:assign amort_year_end=null}}
+
+            {{:include file="./_add_years.tpl" date=$immo.date years=$i keep="date_index"}}
+            {{:include
+                file="./_find_year.tpl"
+                date=$date_index
+                keep="amort_year_start,amort_year_end,amort_year_label,amort_year_id"
+            }}
+
+            {{if $i == 0}}
+                {{if $date|substr:5 == $amort_year_start|substr:5}}
+                    {{:assign amort_amount=$immo.linear_amort_amount}}
+                {{else}}
+                    {{:include file="./_count_days.tpl" start=$immo.date end=$amort_year_end keep="number_of_days"}}
+                    {{:assign var="amort_amount" value="round(%d*%d/360)"|math:$immo.linear_amort_amount:$number_of_days}}
+                {{/if}}
+            {{elseif $i == "%d-1"|math:$number_of_years}}
+                {{:assign amort_amount=$vnc}}
+            {{else}}
+                {{:assign amort_amount=$immo.linear_amort_amount}}
+            {{/if}}
+
+            {{:assign vnc="%d-%d"|math:$vnc:$amort_amount}}
+
+            <tr>
+                <td>{{$amort_year_label}}</td>
+                <td>{{$amort_year_end|date_short}}</td>
+                <td class="money">{{$amort_amount|money_currency}}</td>
+                <td class="money">{{$vnc|money_currency:false}}</td>
+            </tr>
+        {{/foreach}}
+    </tbody>
+</table>
+
+{{:admin_footer}}

@@ -1,0 +1,10 @@
+{{:admin_header title="Test"}}
+
+{{:assign entry=143}}
+
+{{#transactions id=$entry assign="result"}}
+    {{:debug result=$result}}
+{{/transactions}}
+
+
+{{:admin_footer}}
