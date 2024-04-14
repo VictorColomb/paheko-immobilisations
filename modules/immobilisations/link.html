@@ -1,3 +1,6 @@
+{{#restrict block=true section="accounting" level="write"}}
+{{/restrict}}
+
 {{#form on="link"}}
     {{#foreach from=$_POST.entry key="key"}}
         {{:assign var="_POST.entry" value=$key}}

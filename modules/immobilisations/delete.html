@@ -1,3 +1,6 @@
+{{#restrict block=true section="accounting" level="write"}}
+{{/restrict}}
+
 {{#form on="delete"}}
     {{:delete type="immobilisation" key=$_POST.key}}
     {{:redirect to="./"}}

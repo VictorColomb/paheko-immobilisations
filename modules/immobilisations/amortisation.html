@@ -21,6 +21,25 @@
         {{:assign var="_POST.entry" value=$key}}
     {{/foreach}}
 
+    {{#transactions id=$_POST.entry}}
+        {{:api
+            path="accounting/transaction/"|cat:$_POST.entry
+            method="GET"
+            assign="result"
+        }}
+        {{#foreach from=$result.lines item="line"}}
+            {{if $line.account_code|regexp_match:"/^28[01]/" && $credit > 0}}
+                {{:assign amort_account=1}}
+            {{/if}}
+        {{/foreach}}
+
+        {{if !$amort_account}}
+            {{:error message="L'écriture doit contenir une ligne au crédit sur un compte 280 ou 281 !"}}
+        {{/if}}
+    {{else}}
+        {{:error message="L'écriture sélectionnée n'existe pas !"}}
+    {{/transactions}}
+
     {{:assign var="immo.amort_entries."|cat:$_POST.entry value=$_POST.entry}}
 
     {{:save validate_schema="./immobilisation.schema.json" key=$_POST.key amort_entries=$immo.amort_entries}}
@@ -28,17 +47,20 @@
 {{/form}}
 
 {{#form on="save"}}
-    {{if !$_POST.key || !$_POST.year || !$_POST.label || !$_POST.date || !$_POST.amount || !$_POST.amort_account || !$_POST.debit_account}}
+    {{if !$_POST.key || !$_POST.year_id || !$_POST.label || !$_POST.date || !$_POST.amount || !$_POST.amort_account || !$_POST.debit_account}}
         {{:http code=403}}
-        {{:error message="Paramètre key, year, label, date, amount, amort_account ou debit_account manquant !"}}
+        {{:error message="Paramètre key, year_id, label, date, amount, amort_account ou debit_account manquant !"}}
     {{/if}}
 
-    {{if $_POST.year_start && $_POST.year_end}}
-        {{:assign date=$_POST.date|parse_date}}
-        {{if $date < $_POST.year_start || $date > $_POST.year_end}}
-            {{:error message="La date demandée ne correspond pas aux dates de l'exercice sélectionné !"}}
+    {{:assign date=$_POST.date|parse_date}}
+    {{#years}}
+        {{if $id == $_POST.year_id}}
+            {{if $date < $start_date || $date > $end_date}}
+                {{:error message="La date demandée ne correspond pas aux dates de l'exercice sélectionné !"}}
+            {{/if}}
+            {{:break}}
         {{/if}}
-    {{/if}}
+    {{/years}}
 
     {{#foreach from=$_POST.amort_account key="key" item="value"}}
         {{if !$value|regexp_match:"/^28[01]/"}}
@@ -127,9 +149,6 @@
                 {{:input type="list" name="entry" multiple=false required=true label="Écriture d'amortissement" target="!acc/transactions/selector.php"}}
             </dl>
         </fieldset>
-        <p class="help">
-            Attention, aucune validation n'est effectuée sur l'écriture choisie.
-        </p>
         <p class="submit">
             {{:button type="submit" name="link" shape="right" label="Lier" class="main"}}
         </p>
@@ -142,7 +161,7 @@
         {{/if}}
         {{:include file="./_count_years.tpl" date=$immo.date duration=$immo.duration keep="number_of_years"}}
 
-        {{if $immo.date < $current_year.start_date}}
+        {{if $immo.date > $current_year.start_date}}
             {{:error message="L'exercice sélectionné est antérieur à l'immobilisation !"}}
         {{/if}}
 
@@ -169,21 +188,24 @@
         {{:assign amort_account=$immo.account_code|substr:1}}
         {{:assign amort_account="28"|cat:$amort_account}}
         {{#accounts codes=$amort_account}}
-            {{:assign var="amort_account.%d"|args:$id value="%s — %s"|args:$code:$label}}
+            {{if $id_chart == $current_year.id_chart}}
+                {{:assign var="amort_account.%d"|args:$id value="%s — %s"|args:$code:$label}}
+                {{:break}}
+            {{/if}}
         {{else}}
             {{:assign amort_account=null}}
         {{/accounts}}
         {{#accounts codes="6811"}}
-            {{:assign var="debit_account.%d"|args:$id value="%s — %s"|args:$code:$label}}
+            {{if $id_chart == $current_year.id_chart}}
+                {{:assign var="debit_account.%d"|args:$id value="%s — %s"|args:$code:$label}}
+            {{/if}}
         {{/accounts}}
 
         <fieldset>
             <legend>Créer une écriture d'amortissement</legend>
 
             <dl>
-                {{:input type="hidden" name="year" default=$current_year.id}}
-                {{:input type="hidden" name="year_start" default=$current_year.start_date}}
-                {{:input type="hidden" name="year_end" default=$current_year.end_date}}
+                {{:input type="hidden" name="year_id" default=$current_year.id}}
                 <dt>
                     <label>Exercice sélectionné</label>
                 </dt>

@@ -1,4 +1,12 @@
+{{#restrict block=true section="accounting" level="write"}}
+{{/restrict}}
+
 {{#form on="save"}}
+    {{if !$_POST.date || !$_POST.year_id || !$_POST.account || !$_POST.third_party_account || !$_POST.amount}}
+        {{:http code=403}}
+        {{:error message="Le paramètre date, year_id, account, third_party_account ou amount est manquant !"}}
+    {{/if}}
+
     {{if $_POST.key}}
         {{:assign key=$_POST.key}}
         {{:assign new_number=$_POST.number|intval}}
@@ -8,6 +16,16 @@
         {{:assign new_number="%d+1"|math:$max.number}}
         {{:assign key=""|uuid}}
     {{/if}}
+
+    {{:assign var="_POST.date" value=$_POST.date|parse_date}}
+    {{#years}}
+        {{if $id == $_POST.year_id}}
+            {{if $start_date > $_POST.date || $end_date < $_POST.date}}
+                {{:error message="La date demandée ne correspond pas à l'exercice sélectionné !"}}
+            {{/if}}
+            {{:break}}
+        {{/if}}
+    {{/years}}
 
     {{#foreach from=$_POST.account key="key" item="value"}}
         {{:assign var="_POST.account" value=$key}}
@@ -33,12 +51,6 @@
         {{:assign path="accounting/transaction/%d"|args:$_POST.entry}}
     {{else}}
         {{:assign path="accounting/transaction"}}
-
-        {{#years closed=false where="start_date <= :date AND :date <= end_date" :date=$_POST.date|parse_date}}
-            {{:assign var=_POST.year_id value=$id}}
-        {{else}}
-            {{:error message="Aucun exercice ouvert ne correspond à la date désirée !"}}
-        {{/years}}
     {{/if}}
     {{:api
         path=$path
@@ -104,12 +116,33 @@
             {{:input type="hidden" name="entry" source=$immo}}
             {{:input type="hidden" name="year_id" source=$immo}}
         {{/if}}
+
+        {{#years}}
+            {{if $id == $immo.year_id}}
+                {{:assign .="current_year"}}
+                {{:break}}
+            {{/if}}
+        {{/years}}
+    {{else}}
+        {{:include file="./_current_year.tpl" keep="current_year"}}
+        {{:input type="hidden" name="year_id" default=$current_year.id}}
     {{/if}}
 
     <fieldset>
         <legend>Identification de l'immobilisation</legend>
 
         <dl>
+            <dt>
+                <label>Exercice sélectionné</label>
+            </dt>
+            <dd style="margin-bottom: 1em;">
+                <input type="text" value="{{$current_year.label}}" disabled>
+                {{if !$immo}}
+                    {{:assign from_url=$request_url|urlencode}}
+                    {{:linkbutton href="!acc/years/select.php?from="|cat:$from_url shape="settings" label="Changer d'exercice"}}
+                {{/if}}
+            </dd>
+
             {{:input type="text" name="label" label="Objet" required=true source=$immo}}
             {{:input type="textarea" name="description" label="Description" source=$immo help="On peut ici enregistrer un numéro de série ou décrire la composition de l'immobilisation dans le cas d'un lot."}}
             {{:input type="date" name="date" label="Date d'entrée en service" required=true source=$immo help="Par défaut, rentrer la date d'acquisition."}}
@@ -123,12 +156,15 @@
 
         <dl>
             {{#accounts codes="404"}}
-                {{:assign var="third_party_account.%d"|args:$id value="%s — %s"|args:$code:$label}}
+                {{if $current_year.id_chart == $id_chart}}
+                    {{:assign var="third_party_account.%d"|args:$id value="%s — %s"|args:$code:$label}}
+                    {{:break}}
+                {{/if}}
             {{/accounts}}
 
             {{:input type="text" name="entry_label" label="Libellé de l'écriture" source=$immo help="Laisser vide pour utiliser l'objet de l'immobilisation comme libellé."}}
-            {{:input type="list" name="account" multiple=false label="Compte d'immobilisation" required=true source=$immo target="!acc/charts/accounts/selector.php"}}
-            {{:input type="list" name="third_party_account" multiple=false label="Compte de tiers" required=true source=$immo default=$third_party_account target="!acc/charts/accounts/selector.php"}}
+            {{:input type="list" name="account" multiple=false label="Compte d'immobilisation" required=true source=$immo target="!acc/charts/accounts/selector.php?year="|cat:$current_year.id}}
+            {{:input type="list" name="third_party_account" multiple=false label="Compte de tiers" required=true source=$immo default=$third_party_account target="!acc/charts/accounts/selector.php?year="|cat:$current_year.id}}
         </dl>
         <p class="help">Vous pourrez par la suite modifier l'écriture pour saisir une référence, joindre des documents, etc.</p>
     </fieldset>

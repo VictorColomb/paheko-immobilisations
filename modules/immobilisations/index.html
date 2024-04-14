@@ -1,10 +1,12 @@
 {{:admin_header title="Immobilisations" current="home"}}
 
 <nav class="tabs">
-    <aside>
-        {{:linkbutton href="link.html" label="Lier une écriture" shape="attach"}}
-        {{:linkbutton href="new.html" label="Nouvelle immobilisation" shape="plus"}}
-    </aside>
+    {{#restrict section="accounting" level="write"}}
+        <aside>
+            {{:linkbutton href="link.html" label="Lier une écriture" shape="attach"}}
+            {{:linkbutton href="new.html" label="Nouvelle immobilisation" shape="plus"}}
+        </aside>
+    {{/restrict}}
 
     <ul>
         <li{{if $_GET.status === 'all'}} class="current"{{/if}}><a href="./?status=all">Toutes les immobilisations</a></li>
@@ -25,7 +27,9 @@
         <td>Durée d'immobilisation</td>
         <td class="money">Montant</td>
         <td class="money">VNC</td>
-        <td></td>
+        {{#restrict section="accounting" level="write"}}
+            <td></td>
+        {{/restrict}}
     </thead>
     <tbody>
         {{#load
@@ -44,10 +48,12 @@
                     <td colspan="4" style="text-align: center;">
                         <i>Écriture d'immobilisation non trouvée !</i>
                     </td>
-                    <td colspan="2" class="actions">
-                        {{:linkbutton shape="edit" label="Modifier" href="./new.html?key="|cat:$key}}
-                        {{:linkbutton shape="delete" label="Supprimer" href="./delete.html?key="|cat:$key}}
-                    </td>
+                    {{#restrict section="accounting" level="write"}}
+                        <td colspan="2" class="actions">
+                            {{:linkbutton shape="edit" label="Modifier" href="./new.html?key="|cat:$key}}
+                            {{:linkbutton shape="delete" label="Supprimer" href="./delete.html?key="|cat:$key}}
+                        </td>
+                    {{/restrict}}
                 {{else}}
                     <td class="num">{{:link href="./view.html?key=%s"|args:$immo.key label=$immo.number}}</td>
                     <th>{{$immo.label}}</th>
@@ -59,9 +65,11 @@
                     {{/if}}
                     <td class="money">{{$immo.amount|money_currency}}</td>
                     <td class="money">{{$immo.vnc|money_currency}}</td>
-                    <td class="actions">
-                        {{:linkbutton shape="menu" label="Ouvrir" href="./view.html?key="|cat:$key}}
-                    </td>
+                    {{#restrict section="accounting" level="write"}}
+                        <td class="actions">
+                            {{:linkbutton shape="menu" label="Ouvrir" href="./view.html?key="|cat:$key}}
+                        </td>
+                    {{/restrict}}
                 {{/if}}
             </tr>
         {{/load}}

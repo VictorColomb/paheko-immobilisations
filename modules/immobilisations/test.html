@@ -1,10 +1,12 @@
 {{:admin_header title="Test"}}
 
-{{:assign entry=143}}
+{{:include file="./_current_year.tpl" keep="current_year"}}
+{{:debug year=$current_year}}
 
-{{#transactions id=$entry assign="result"}}
-    {{:debug result=$result}}
-{{/transactions}}
+{{#accounts codes="404"}}
+    {{:assign .="account"}}
+    {{:debug account=$account}}
+{{/accounts}}
 
 
 {{:admin_footer}}

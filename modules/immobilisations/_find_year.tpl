@@ -2,11 +2,14 @@
     {{:error message="Fonction 'find_year' : paramètre date manquant !"}}
 {{/if}}
 
-{{#years where="start_date <= :date AND end_date >= :date" :date=$date}}
-    {{:assign amort_year_id=$id}}
-    {{:assign amort_year_label=$label}}
-    {{:assign amort_year_start=$start_date}}
-    {{:assign amort_year_end=$end_date}}
+{{#years}}
+    {{if $start_date <= $date && $end_date >= $date}}
+        {{:assign amort_year_id=$id}}
+        {{:assign amort_year_label=$label}}
+        {{:assign amort_year_start=$start_date}}
+        {{:assign amort_year_end=$end_date}}
+        {{:break}}
+    {{/if}}
 {{/years}}
 
 {{if !$amort_year_end}}

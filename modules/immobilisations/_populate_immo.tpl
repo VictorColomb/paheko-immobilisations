@@ -51,8 +51,11 @@
                 {{/if}}
             {{/foreach}}
 
-            {{#years id=$result.id_year}}
-                {{:assign var="year_label" value=$label}}
+            {{#years}}
+                {{if $id == $result.id_year}}
+                    {{:assign var="year_label" value=$label}}
+                    {{:break}}
+                {{/if}}
             {{/years}}
             {{:assign date=$result.date|parse_date}}
             {{:assign

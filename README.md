@@ -22,9 +22,11 @@
 
 ## 📝 Roadmap
 
+* ~~Accès aux immobilisations en lecture seule~~
+* Amortissement la première année au prorata du nombre de mois, et non de jours
 * Lien vers une immobilisation sur la page de ses écritures liées
 * Checklist clôture de l'exercice (vérifier que tous les amortissements ont bien été passés)
-* Amortissements dégressifs (peut être)
+* Amortissements dégressifs _(peut être)_
 
 ## ⚖️ License
 

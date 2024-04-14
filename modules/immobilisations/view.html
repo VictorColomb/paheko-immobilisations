@@ -32,10 +32,12 @@
 {{/if}}
 
 <nav class="tabs">
-    <aside>
-        {{:linkbutton shape="edit" label="Modifier" href="./new.html?key=%s"|args:$immo.key}}
-        {{:linkbutton shape="delete" label="Supprimer" href="./delete.html?key=%s"|args:$immo.key}}
-    </aside>
+    {{#restrict section="accounting" level="write"}}
+        <aside>
+            {{:linkbutton shape="edit" label="Modifier" href="./new.html?key=%s"|args:$immo.key}}
+            {{:linkbutton shape="delete" label="Supprimer" href="./delete.html?key=%s"|args:$immo.key}}
+        </aside>
+    {{/restrict}}
 
     {{:linkbutton shape="left" label="Retour à la liste des immobilisations" href="./"}}
 </nav>
@@ -80,18 +82,22 @@
     {{if $immo.writeoff_entry}}
         <dd class="num">
             {{:link href="!acc/transactions/details.php?id=%d"|args:$immo.writeoff_entry label="#%s"|args:$immo.writeoff_entry}}
-            {{:linkbutton href="./writeoff.html?key=%s&unlink"|args:$immo.key shape="delete" label="Délier"}}
+            {{#restrict section="accounting" level="write"}}
+                {{:linkbutton href="./writeoff.html?key=%s&unlink"|args:$immo.key shape="delete" label="Délier"}}
+            {{/restrict}}
         </dd>
     {{else}}
         <dd>
-            {{:linkbutton href="./writeoff.html?key=%s"|args:$immo.key shape="plus" label="Créer"}}
-            {{:linkbutton href="./writeoff.html?key=%s&link"|args:$immo.key shape="attach" label="Lier"}}
+            {{#restrict section="accounting" level="write"}}
+                {{:linkbutton href="./writeoff.html?key=%s"|args:$immo.key shape="plus" label="Créer"}}
+                {{:linkbutton href="./writeoff.html?key=%s&link"|args:$immo.key shape="attach" label="Lier"}}
+            {{/restrict}}
         </dd>
     {{/if}}
 </dl>
 
 <h2 class="ruler">Écritures d'amortissement</h2>
-<div style="display: flex; flex-direction: row; align-items: center; margin-bottom: 1em;">
+<div style="display: flex; flex-direction: row; align-items: center; margin: 1em;">
     <div style="flex: 0 0 calc(100% - 15rem);">
         <table class="list" style="margin-bottom: 0;">
             <thead>
@@ -99,7 +105,9 @@
                 <td>Exercice</td>
                 <td>Date</td>
                 <td class="money">Montant</td>
-                <td></td>
+                {{#restrict section="accounting" level="write"}}
+                    <td></td>
+                {{/restrict}}
             </thead>
             <tbody>
                 {{#foreach from=$immo.amort_entries item="amort_entry"}}
@@ -118,18 +126,22 @@
                             <td>{{$amort_entry.date|date_short}}</td>
                             <td class="money">{{$amort_entry.amount|money_currency}}</td>
                         {{/if}}
-                        <td class="actions">
-                            {{:linkbutton href="./amortisation.html?key=%s&unlink=%d"|args:$immo.key:$amort_entry.id shape="delete" label="Délier"}}
-                        </td>
+                        {{#restrict section="accounting" level="write"}}
+                            <td class="actions">
+                                {{:linkbutton href="./amortisation.html?key=%s&unlink=%d"|args:$immo.key:$amort_entry.id shape="delete" label="Supprimer"}}
+                            </td>
+                        {{/restrict}}
                     </tr>
                 {{/foreach}}
             </tbody>
         </table>
     </div>
     <div style="flex: 0 0 15rem; text-align: center;">
-        {{:linkbutton href="./amortisation.html?key=%s"|args:$immo.key shape="plus" label="Créer"}}
-        <br>
-        {{:linkbutton href="./amortisation.html?key=%s&link"|args:$immo.key shape="attach" label="Lier"}}
+        {{#restrict section="accounting" level="write"}}
+            {{:linkbutton href="./amortisation.html?key=%s"|args:$immo.key shape="plus" label="Créer"}}
+            <br>
+            {{:linkbutton href="./amortisation.html?key=%s&link"|args:$immo.key shape="attach" label="Lier"}}
+        {{/restrict}}
     </div>
 </div>
 
