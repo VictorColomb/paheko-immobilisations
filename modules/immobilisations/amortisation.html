@@ -80,7 +80,7 @@
         path="accounting/transaction"
         assign="result"
 
-        id_year=$_POST.year
+        id_year=$_POST.year_id
         date=$_POST.date
         type="ADVANCED"
         label=$_POST.label|trim
@@ -161,7 +161,7 @@
         {{/if}}
         {{:include file="./_count_years.tpl" date=$immo.date duration=$immo.duration keep="number_of_years"}}
 
-        {{if $immo.date > $current_year.start_date}}
+        {{if $immo.date > $current_year.end_date}}
             {{:error message="L'exercice sélectionné est antérieur à l'immobilisation !"}}
         {{/if}}
 
